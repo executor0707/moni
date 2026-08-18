@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>魔芋计算器</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: #f5f5f5;
+    min-height: 100vh;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .container {
+    width: 100%;
+    max-width: 400px;
+    background: #fff;
+    border: 2px solid #000;
+    border-radius: 0;
+    box-shadow: none;
+    overflow: hidden;
+  }
+  .header {
+    background: #000;
+    color: #fff;
+    padding: 20px;
+    text-align: center;
+    border-bottom: 2px solid #000;
+  }
+  .header h1 { font-size: 20px; font-weight: 700; }
+  .header .subtitle { font-size: 11px; opacity: 0.7; margin-top: 2px; }
+
+  .content { padding: 20px; }
+
+  .input-row { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
+  input[type="number"], select {
+    flex: 1; padding: 10px 12px; border: 2px solid #000;
+    border-radius: 0; font-size: 14px; outline: none; background: #fff;
+  }
+  input:focus { border-color: #000; background: #f9f9f9; }
+  .unit-label {
+    background: #000; color: #fff; padding: 0 10px;
+    border-radius: 0; font-size: 12px; white-space: nowrap; font-weight: 600;
+  }
+
+  .rate-display {
+    background: #f0f0f0; border: 2px solid #000;
+    border-radius: 0; padding: 14px 16px; text-align: center;
+    margin-bottom: 16px;
+  }
+  .rate-display .label { font-size: 11px; color: #666; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+  .rate-display .value { font-size: 24px; font-weight: 700; color: #000; }
+
+  .btn {
+    width: 100%; padding: 14px; border: 2px solid #000;
+    border-radius: 0; font-size: 15px; font-weight: 700; cursor: pointer;
+    transition: all 0.15s; margin-bottom: 8px;
+    background: #fff; color: #000;
+  }
+  .btn-primary { background: #000; color: #fff; }
+  .btn-primary:hover { background: #333; border-color: #333; }
+  .btn-stop {
+    background: #f0f0f0; color: #999; border-color: #ccc;
+  }
+  .btn-stop:hover { background: #e8e8e8; color: #777; border-color: #bbb; }
+
+  .live-display {
+    text-align: center; padding: 16px; background: #f0f0f0;
+    border: 2px solid #000; border-radius: 0; margin-bottom: 16px; display: none;
+  }
+  .live-display.active { display: block; }
+  .live-display .elapsed {
+    font-size: 32px; font-weight: 700; color: #000;
+    font-family: "Courier New", monospace; line-height: 1.2;
+  }
+  .live-display .cost {
+    font-size: 14px; color: #cc0000; margin-top: 2px;
+    font-weight: 600; opacity: 0.7;
+  }
+
+  .records { margin-top: 16px; }
+  .records h3 { font-size: 11px; color: #333; margin-bottom: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+  .record-list { max-height: 220px; overflow-y: auto; border: 2px solid #000; border-radius: 0; }
+  .record-item {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 12px; border-bottom: 1px solid #000; font-size: 12px;
+  }
+  .record-item:last-child { border-bottom: none; }
+  .record-item:nth-child(even) { background: #f9f9f9; }
+  .record-item .period { color: #666; font-size: 11px; margin-top: 2px; }
+  .record-item .right { text-align: right; }
+  .record-item .cost { font-weight: 700; color: #cc0000; font-size: 14px; }
+  .record-item .btn-delete {
+    margin-top: 4px; padding: 3px 8px; border: 1px solid #cc0000;
+    background: #fff; color: #cc0000; border-radius: 0;
+    font-size: 10px; cursor: pointer; transition: all 0.15s;
+  }
+  .record-item .btn-delete:hover { background: #cc0000; color: #fff; }
+
+  .summary {
+    background: #000; color: #fff; border: 2px solid #000; border-radius: 0;
+    padding: 14px; margin-top: 16px; text-align: center; display: none;
+  }
+  .summary.show { display: block; }
+  .summary .total-cost { font-size: 22px; font-weight: 700; }
+  .summary .total-label { font-size: 11px; color: #ccc; margin-top: 3px; }
+  .summary .total-count { font-size: 11px; color: #aaa; margin-top: 3px; }
+
+  .empty-state { text-align: center; color: #999; padding: 20px; font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>工贼摸鱼计算器</h1>
+    <div class="subtitle">Slack Time Cost Calculator</div>
+  </div>
+
+  <div class="content">
+    <div class="input-row">
+      <input type="number" id="rateInput" placeholder="输入金额" value="57.69" min="0" step="0.01">
+      <select id="rateUnit" class="unit-label" style="flex:0 0 70px;">
+        <option value="hourly">时薪</option>
+        <option value="daily">日薪</option>
+      </select>
+    </div>
+
+    <div class="rate-display">
+      <div class="label">当前费率</div>
+      <div class="value" id="rateDisplay">¥ 57.69 / 小时</div>
+    </div>
+
+    <button class="btn btn-primary" id="startBtn" onclick="startSlacking()">开始摸鱼</button>
+    <button class="btn btn-stop" id="stopBtn" onclick="stopSlacking()" style="display:none;">结束摸鱼</button>
+
+    <div class="live-display" id="liveDisplay">
+      <div class="elapsed" id="elapsedTime">00:00:00</div>
+      <div class="cost" id="liveCost">已薅老板 ¥ 0.00</div>
+    </div>
+
+    <div class="records">
+      <h3>摸鱼记录</h3>
+      <div class="record-list" id="recordList">
+        <div class="empty-state">暂无记录</div>
+      </div>
+    </div>
+
+    <div class="summary" id="summary">
+      <div class="total-cost" id="totalCost">¥ 0.00</div>
+      <div class="total-label">累计摸鱼金额</div>
+      <div class="total-count" id="totalCount">共 0 次摸鱼</div>
+    </div>
+  </div>
+</div>
+
+<script>
+let timerInterval = null;
+let isSlacking = false;
+let slackStart = null;
+
+function fmtNum(n) { return String(n).padStart(2, '0'); }
+
+function getCurrentRate() {
+  const val = parseFloat(document.getElementById('rateInput').value) || 0;
+  const unit = document.getElementById('rateUnit').value;
+  return unit === 'hourly' ? val : val / 8;
+}
+
+function updateRateDisplay() {
+  const val = parseFloat(document.getElementById('rateInput').value) || 0;
+  const unit = document.getElementById('rateUnit').value;
+  document.getElementById('rateDisplay').textContent =
+    unit === 'hourly' ? `¥ ${val.toFixed(2)} / 小时` : `¥ ${val.toFixed(2)} / 天`;
+}
+
+document.getElementById('rateInput').addEventListener('input', updateRateDisplay);
+document.getElementById('rateUnit').addEventListener('change', updateRateDisplay);
+updateRateDisplay();
+
+function formatDuration(ms) {
+  const s = Math.floor(ms / 1000);
+  return `${fmtNum(Math.floor(s / 3600))}:${fmtNum(Math.floor((s % 3600) / 60))}:${fmtNum(s % 60)}`;
+}
+
+function formatTime(ts) {
+  const d = new Date(ts);
+  return `${d.getFullYear()}-${fmtNum(d.getMonth()+1)}-${fmtNum(d.getDate())} ${fmtNum(d.getHours())}:${fmtNum(d.getMinutes())}:${fmtNum(d.getSeconds())}`;
+}
+
+function startSlacking() {
+  slackStart = Date.now();
+  isSlacking = true;
+  document.getElementById('startBtn').style.display = 'none';
+  document.getElementById('stopBtn').style.display = 'block';
+  document.getElementById('liveDisplay').classList.add('active');
+  updateLiveDisplay();
+  timerInterval = setInterval(updateLiveDisplay, 1000);
+}
+
+function stopSlacking() {
+  if (!isSlacking) return;
+  clearInterval(timerInterval);
+  isSlacking = false;
+
+  const slackEnd = Date.now();
+  const duration = slackEnd - slackStart;
+  const hourly = getCurrentRate();
+  const cost = (duration / 3600000) * hourly;
+
+  saveRecord(slackStart, slackEnd, duration, cost);
+  updateSummary();
+
+  document.getElementById('startBtn').style.display = '';
+  document.getElementById('stopBtn').style.display = 'none';
+  document.getElementById('liveDisplay').classList.remove('active');
+}
+
+function updateLiveDisplay() {
+  if (!isSlacking || !slackStart) return;
+  const now = Date.now();
+  const duration = now - slackStart;
+  const hourly = getCurrentRate();
+  const cost = (duration / 3600000) * hourly;
+  document.getElementById('elapsedTime').textContent = formatDuration(duration);
+  document.getElementById('liveCost').textContent = `已薅老板 ¥ ${cost.toFixed(2)}`;
+}
+
+function saveRecord(start, end, duration, cost) {
+  const records = getRecords();
+  records.push({
+    id: Date.now(),
+    start: start,
+    end: end,
+    duration: formatDuration(duration),
+    cost: cost
+  });
+  localStorage.setItem('slack_records', JSON.stringify(records));
+  renderRecords();
+}
+
+function getRecords() {
+  try { return JSON.parse(localStorage.getItem('slack_records') || '[]'); } catch { return []; }
+}
+
+function deleteRecord(id) {
+  let records = getRecords();
+  records = records.filter(r => r.id !== id);
+  localStorage.setItem('slack_records', JSON.stringify(records));
+  renderRecords();
+  updateSummary();
+}
+
+function renderRecords() {
+  const records = getRecords().slice().reverse();
+  const list = document.getElementById('recordList');
+  if (records.length === 0) {
+    list.innerHTML = '<div class="empty-state">暂无记录</div>';
+    return;
+  }
+  list.innerHTML = records.map(r => `
+    <div class="record-item">
+      <div>
+        <div style="font-weight:600;color:#000;">${r.duration}</div>
+        <div class="period">${formatTime(r.start)} - ${formatTime(r.end)}</div>
+      </div>
+      <div class="right">
+        <div class="cost">¥ ${r.cost.toFixed(2)}</div>
+        <button class="btn-delete" onclick="deleteRecord(${r.id})">删除</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function updateSummary() {
+  const records = getRecords();
+  const totalCost = records.reduce((sum, r) => sum + r.cost, 0);
+  const summary = document.getElementById('summary');
+  if (records.length === 0) {
+    summary.classList.remove('show');
+    return;
+  }
+  summary.classList.add('show');
+  document.getElementById('totalCost').textContent = `¥ ${totalCost.toFixed(2)}`;
+  document.getElementById('totalCount').textContent = `共 ${records.length} 次摸鱼`;
+}
+
+renderRecords();
+updateSummary();
+</script>
+</body>
+</html>
