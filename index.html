@@ -226,7 +226,7 @@ function updateLiveDisplay() {
   const hourly = getCurrentRate();
   const cost = (duration / 3600000) * hourly;
   document.getElementById('elapsedTime').textContent = formatDuration(duration);
-  document.getElementById('liveCost').textContent = `已薅老板 ¥ ${cost.toFixed(2)}`;
+  document.getElementById('liveCost').textContent = `已薅魔芋 ¥ ${cost.toFixed(2)}`;
 }
 
 function saveRecord(start, end, duration, cost) {
@@ -285,7 +285,7 @@ function updateSummary() {
   }
   summary.classList.add('show');
   document.getElementById('totalCost').textContent = `¥ ${totalCost.toFixed(2)}`;
-  document.getElementById('totalCount').textContent = `共 ${records.length} 次摸鱼`;
+  document.getElementById('totalCount').textContent = `共 ${records.length} 次魔芋`;
 }
 
 renderRecords();
